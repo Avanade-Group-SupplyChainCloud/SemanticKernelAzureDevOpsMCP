@@ -28,7 +28,7 @@ var tools = await mcpClient.ListToolsAsync();
 
 var toolsJsonPath = Path.Combine(AppContext.BaseDirectory, "tools.json");
 var toolsJson = JsonSerializer.Serialize(
-    tools.Skip(20).Take(5),
+    tools.Skip(40).Take(5),
     new JsonSerializerOptions { WriteIndented = true }
 );
 await File.WriteAllTextAsync(toolsJsonPath, toolsJson);

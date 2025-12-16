@@ -41,6 +41,7 @@ builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetCl
 builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.VisualStudio.Services.Identity.Client.IdentityHttpClient>());
 builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.Build.WebApi.BuildHttpClient>());
 builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.Azure.Pipelines.WebApi.PipelinesHttpClient>());
+builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.SourceControl.WebApi.GitHttpClient>());
 
 builder.Services.AddHttpClient("ado-pat", client =>
 {
