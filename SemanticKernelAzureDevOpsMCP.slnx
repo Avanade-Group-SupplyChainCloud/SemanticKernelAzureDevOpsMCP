@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AdoMcpRestServer/AdoMcpRestServer.csproj" />
+  <Project Path="SemanticKernelAzureDevOpsMCP/SemanticKernelAzureDevOpsMCP.csproj" />
+</Solution>
