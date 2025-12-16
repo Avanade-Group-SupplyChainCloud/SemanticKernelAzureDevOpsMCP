@@ -13,7 +13,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - run: dotnet publish ShipConfiguratorMCP/ShipConfiguratorMCP.csproj -c Release -o ./published
+      - run: dotnet publish AdoMcpRestServer/AdoMcpRestServer.csproj -c Release -o ./published
 
       - uses: azure/webapps-deploy@v3
         with:
