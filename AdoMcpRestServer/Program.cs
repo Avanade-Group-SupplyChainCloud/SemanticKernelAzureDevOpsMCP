@@ -10,6 +10,10 @@ using AdoMcpRestServer.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// API Key authentication
+var apiKey = builder.Configuration["MCP_API_KEY"] 
+    ?? throw new InvalidOperationException("Missing configuration: MCP_API_KEY");
+
 builder.Services
     .AddMcpServer()
     .WithHttpTransport()
@@ -46,6 +50,18 @@ builder.Services.AddHttpClient("ado-pat", client =>
 });
 
 var app = builder.Build();
+
+// Validate API key on all requests
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Headers.TryGetValue("X-API-Key", out var providedKey) || providedKey != apiKey)
+    {
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Unauthorized");
+        return;
+    }
+    await next();
+});
 
 app.MapMcp();
 
