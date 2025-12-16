@@ -8,26 +8,10 @@ using ModelContextProtocol.Client;
 
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-var kernel = Kernel
-    .CreateBuilder()
-    .AddAzureOpenAIChatCompletion(
-        deploymentName: "gpt-4.1",
-        endpoint: "https://yo.azure.com/",
-        apiKey: ""
-    )
-    .Build();
-
 var promptExecutionSettings = new PromptExecutionSettings()
 {
     FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
 };
-
-var chatService = kernel.GetRequiredService<IChatCompletionService>();
-var chatHistory = new ChatHistory(
-    """
-       You are an AI assistant who likes to follow the rules.
-    """
-);
 
 var mcpClient = await McpClient.CreateAsync(
     new StdioClientTransport(
@@ -44,7 +28,7 @@ var tools = await mcpClient.ListToolsAsync();
 
 var toolsJsonPath = Path.Combine(AppContext.BaseDirectory, "tools.json");
 var toolsJson = JsonSerializer.Serialize(
-    tools.Skip(15).Take(5),
+    tools.Skip(20).Take(5),
     new JsonSerializerOptions { WriteIndented = true }
 );
 await File.WriteAllTextAsync(toolsJsonPath, toolsJson);
@@ -56,6 +40,22 @@ foreach (var tool in tools)
     Console.ForegroundColor = ConsoleColor.Yellow;
     Console.WriteLine($"Discovered tool: {tool.Name} - {tool.Description}");
 }
+
+var kernel = Kernel
+    .CreateBuilder()
+    .AddAzureOpenAIChatCompletion(
+        deploymentName: "gpt-4.1",
+        endpoint: "https://yo.azure.com/",
+        apiKey: ""
+    )
+    .Build();
+
+var chatService = kernel.GetRequiredService<IChatCompletionService>();
+var chatHistory = new ChatHistory(
+    """
+       You are an AI assistant who likes to follow the rules.
+    """
+);
 
 kernel.Plugins.AddFromFunctions("ADO", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
 
