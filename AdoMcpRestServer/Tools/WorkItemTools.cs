@@ -33,11 +33,11 @@ public record ChildWorkItemInput(string Title, string Description, string? Forma
 public record WorkItemUpdate(string Op, string Path, object Value);
 public record WorkItemLinkResult(int WorkItemId, string TargetId, string RelationType, bool Success, string? Error);
 public record WorkItemTypeDto(string Name, string Description, List<string> Fields);
-public record FieldInput(string Name, string Value, string? Format);
+public record FieldInput(string Name, string Value, string Format = "Html");
 public record QueryHierarchyItemDto(string Id, string Name, string Path, bool IsFolder, bool HasChildren);
 public record WorkItemReferenceDto(int Id, string Url);
 public record WorkItemQueryResultDto(string QueryType, DateTime AsOf, List<WorkItemReferenceDto> WorkItems);
-public record BatchWorkItemUpdate(int Id, string Op, string Path, string Value, string? Format);
+public record BatchWorkItemUpdate(int Id, string Op, string Path, string Value, string Format = "Html");
 
 [McpServerToolType]
 public static class WorkItemTools

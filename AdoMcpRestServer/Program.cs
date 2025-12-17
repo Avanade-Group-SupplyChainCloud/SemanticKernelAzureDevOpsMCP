@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 using ModelContextProtocol.AspNetCore;
@@ -82,6 +83,22 @@ builder.Services.AddHttpClient(
 );
 
 var app = builder.Build();
+
+// Request logging
+app.Use(async (context, next) =>
+{
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+    var hasApiKey = context.Request.Headers.ContainsKey("X-API-Key");
+    var protocolVersion = context.Request.Headers["MCP-Protocol-Version"];
+    
+    logger.LogInformation("Request: {Method} {Path} | HasApiKey: {HasApiKey} | Protocol: {Protocol}", 
+        context.Request.Method, 
+        context.Request.Path, 
+        hasApiKey, 
+        protocolVersion);
+        
+    await next();
+});
 
 // Validate API key on all requests
 app.Use(
