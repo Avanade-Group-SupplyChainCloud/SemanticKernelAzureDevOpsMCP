@@ -8,24 +8,24 @@ using ModelContextProtocol.Server;
 namespace AdoMcpRestServer.Tools;
 
 // PR/Branch DTOs
-public record BranchCreatedResult(string Name, string CommitId, bool Success, string? Error);
-public record PullRequestDto(int Id, string Title, string Status, string SourceBranch, string TargetBranch, string CreatedBy, DateTime CreationDate, string? Url);
+public record BranchCreatedResult(string Name, string CommitId, bool Success, string Error);
+public record PullRequestDto(int Id, string Title, string Status, string SourceBranch, string TargetBranch, string CreatedBy, DateTime CreationDate, string Url);
 public record ReviewerUpdateResult(int PullRequestId, string Action, int ReviewersUpdated);
 
 // Repository DTOs
-public record RepositoryDto(string Id, string Name, string DefaultBranch, string? Url, string ProjectId, string ProjectName);
-public record BranchDto(string Name, string ObjectId, string? Creator, bool? IsLocked);
-public record PrThreadDto(int Id, string Status, string? FilePath, int CommentCount, DateTime? LastUpdated);
-public record PrCommentDto(int Id, string Content, string Author, DateTime PublishedDate, int? ParentCommentId);
-public record PullRequestDetailDto(int Id, string Title, string Description, string Status, string SourceBranch, string TargetBranch, string CreatedBy, DateTime CreationDate, string? Url, bool IsDraft, List<string>? WorkItemIds, List<string>? ReviewerNames);
+public record RepositoryDto(string Id, string Name, string DefaultBranch, string Url, string ProjectId, string ProjectName);
+public record BranchDto(string Name, string ObjectId, string Creator, bool IsLocked);
+public record PrThreadDto(int Id, string Status, string FilePath, int CommentCount, DateTime LastUpdated);
+public record PrCommentDto(int Id, string Content, string Author, DateTime PublishedDate, int ParentCommentId);
+public record PullRequestDetailDto(int Id, string Title, string Description, string Status, string SourceBranch, string TargetBranch, string CreatedBy, DateTime CreationDate, string Url, bool IsDraft, List<string> WorkItemIds, List<string> ReviewerNames);
 public record CommentReplyResult(int CommentId, int ThreadId, string Content, string Author, DateTime PublishedDate);
 
 // Comment Thread DTOs
-public record ThreadCreatedResult(int ThreadId, string Status, string Content, string? FilePath, DateTime CreatedDate);
+public record ThreadCreatedResult(int ThreadId, string Status, string Content, string FilePath, DateTime CreatedDate);
 public record ThreadResolvedResult(int ThreadId, string Status, bool Success);
 
 // Commit DTOs
-public record CommitDto(string CommitId, string Message, string Author, string AuthorEmail, string Committer, string CommitterEmail, DateTime AuthorDate, DateTime CommitDate, string? Url, List<string>? WorkItemIds);
+public record CommitDto(string CommitId, string Message, string Author, string AuthorEmail, string Committer, string CommitterEmail, DateTime AuthorDate, DateTime CommitDate, string Url, List<string> WorkItemIds);
 public record CommitSearchResult(List<CommitDto> Commits, int Count);
 public record PullRequestByCommitDto(int PullRequestId, string Title, string Status, string SourceBranch, string TargetBranch, string CommitId);
 
@@ -37,8 +37,8 @@ public static class RepositoryTools
         GitHttpClient gitClient,
         [Description("The ID of the repository where the branch will be created")] string repositoryId,
         [Description("The name of the new branch to create, e.g., 'feature-branch'")] string branchName,
-        [Description("The name of the source branch to create the new branch from. Defaults to 'main'")] string? sourceBranchName = "main",
-        [Description("The commit ID to create the branch from. If not provided, uses the latest commit of the source branch")] string? sourceCommitId = null,
+        [Description("The name of the source branch to create the new branch from. Defaults to 'main'")] string sourceBranchName = "main",
+        [Description("The commit ID to create the branch from. If not provided, uses the latest commit of the source branch")] string sourceCommitId = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -83,10 +83,10 @@ public static class RepositoryTools
         [Description("The source branch name for the pull request, e.g., 'refs/heads/feature-branch'")] string sourceRefName,
         [Description("The target branch name for the pull request, e.g., 'refs/heads/main'")] string targetRefName,
         [Description("The title of the pull request")] string title,
-        [Description("The description of the pull request (max 4000 chars)")] string? description = null,
-        [Description("Indicates whether the pull request is a draft")] bool? isDraft = false,
-        [Description("Work item IDs to associate, space-separated")] string? workItems = null,
-        [Description("The ID of the fork repository (optional, for PRs from forks)")] string? forkSourceRepositoryId = null,
+        [Description("The description of the pull request (max 4000 chars)")] string description = null,
+        [Description("Indicates whether the pull request is a draft")] bool isDraft = false,
+        [Description("Work item IDs to associate, space-separated")] string workItems = null,
+        [Description("The ID of the fork repository (optional, for PRs from forks)")] string forkSourceRepositoryId = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -96,7 +96,7 @@ public static class RepositoryTools
             TargetRefName = targetRefName,
             Title = title,
             Description = description,
-            IsDraft = isDraft ?? false
+            IsDraft = isDraft
         };
 
         if (!string.IsNullOrEmpty(forkSourceRepositoryId))
@@ -137,16 +137,16 @@ public static class RepositoryTools
         GitHttpClient gitClient,
         [Description("The ID of the repository where the pull request exists")] string repositoryId,
         [Description("The ID of the pull request to update")] int pullRequestId,
-        [Description("The new title for the pull request")] string? title = null,
-        [Description("The new description (max 4000 chars)")] string? description = null,
-        [Description("Whether the pull request should be a draft")] bool? isDraft = null,
-        [Description("The new target branch name (e.g., 'refs/heads/main')")] string? targetRefName = null,
-        [Description("The new status: Active or Abandoned")] string? status = null,
-        [Description("Set the pull request to autocomplete when requirements are met")] bool? autoComplete = null,
-        [Description("Merge strategy: NoFastForward, Squash, Rebase, RebaseMerge")] string? mergeStrategy = null,
-        [Description("Whether to delete the source branch on autocomplete")] bool? deleteSourceBranch = false,
-        [Description("Whether to transition work items on autocomplete")] bool? transitionWorkItems = true,
-        [Description("Reason for bypassing branch policies")] string? bypassReason = null,
+        [Description("The new title for the pull request")] string title = null,
+        [Description("The new description (max 4000 chars)")] string description = null,
+        [Description("Whether the pull request should be a draft")] bool isDraft = false,
+        [Description("The new target branch name (e.g., 'refs/heads/main')")] string targetRefName = null,
+        [Description("The new status: Active or Abandoned")] string status = null,
+        [Description("Set the pull request to autocomplete when requirements are met")] bool autoComplete = false,
+        [Description("Merge strategy: NoFastForward, Squash, Rebase, RebaseMerge")] string mergeStrategy = null,
+        [Description("Whether to delete the source branch on autocomplete")] bool deleteSourceBranch = false,
+        [Description("Whether to transition work items on autocomplete")] bool transitionWorkItems = true,
+        [Description("Reason for bypassing branch policies")] string bypassReason = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -157,7 +157,7 @@ public static class RepositoryTools
 
         if (title != null) update.Title = title;
         if (description != null) update.Description = description;
-        if (isDraft != null) update.IsDraft = isDraft;
+        if (isDraft) update.IsDraft = isDraft;
         if (targetRefName != null) update.TargetRefName = targetRefName;
         if (status != null)
         {
@@ -169,13 +169,13 @@ public static class RepositoryTools
             };
         }
 
-        if (autoComplete == true)
+        if (autoComplete)
         {
             update.AutoCompleteSetBy = currentPr.CreatedBy;
             update.CompletionOptions = new GitPullRequestCompletionOptions
             {
-                DeleteSourceBranch = deleteSourceBranch ?? false,
-                TransitionWorkItems = transitionWorkItems ?? true,
+                DeleteSourceBranch = deleteSourceBranch,
+                TransitionWorkItems = transitionWorkItems,
                 BypassReason = bypassReason,
                 BypassPolicy = !string.IsNullOrEmpty(bypassReason),
                 MergeStrategy = mergeStrategy switch
@@ -187,7 +187,7 @@ public static class RepositoryTools
                 }
             };
         }
-        else if (autoComplete == false)
+        else if (!autoComplete)
         {
             update.AutoCompleteSetBy = null;
         }
@@ -247,9 +247,9 @@ public static class RepositoryTools
     public static async Task<IReadOnlyList<RepositoryDto>> RepoListReposByProject(
         GitHttpClient gitClient,
         [Description("The name or ID of the Azure DevOps project")] string project,
-        [Description("The maximum number of repositories to return")] int? top = 100,
-        [Description("The number of repositories to skip")] int? skip = 0,
-        [Description("Filter repositories by name (contains)")] string? repoNameFilter = null,
+        [Description("The maximum number of repositories to return")] int top = 100,
+        [Description("The number of repositories to skip")] int skip = 0,
+        [Description("Filter repositories by name (contains)")] string repoNameFilter = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -260,8 +260,8 @@ public static class RepositoryTools
             filtered = filtered.Where(r => r.Name.Contains(repoNameFilter, StringComparison.OrdinalIgnoreCase));
 
         return filtered
-            .Skip(skip ?? 0)
-            .Take(top ?? 100)
+            .Skip(skip)
+            .Take(top)
             .Select(r => new RepositoryDto(
                 r.Id.ToString(),
                 r.Name,
@@ -276,17 +276,17 @@ public static class RepositoryTools
     [McpServerTool, Description("Retrieve a list of pull requests for a repository or project.")]
     public static async Task<IReadOnlyList<PullRequestDto>> RepoListPullRequests(
         GitHttpClient gitClient,
-        [Description("The ID of the repository (optional if project provided)")] string? repositoryId = null,
-        [Description("The project ID or name (optional if repositoryId provided)")] string? project = null,
-        [Description("Maximum number of pull requests to return")] int? top = 100,
-        [Description("Number of pull requests to skip")] int? skip = 0,
-        [Description("Filter PRs created by current user")] bool? created_by_me = false,
-        [Description("Filter PRs created by specific user (email or unique name)")] string? created_by_user = null,
-        [Description("Filter PRs where current user is reviewer")] bool? i_am_reviewer = false,
-        [Description("Filter PRs where specific user is reviewer (email)")] string? user_is_reviewer = null,
-        [Description("Filter by status: NotSet, Active, Abandoned, Completed, All")] string? status = "Active",
-        [Description("Filter by source branch (e.g., 'refs/heads/feature')")] string? sourceRefName = null,
-        [Description("Filter by target branch (e.g., 'refs/heads/main')")] string? targetRefName = null,
+        [Description("The ID of the repository (optional if project provided)")] string repositoryId = null,
+        [Description("The project ID or name (optional if repositoryId provided)")] string project = null,
+        [Description("Maximum number of pull requests to return")] int top = 100,
+        [Description("Number of pull requests to skip")] int skip = 0,
+        [Description("Filter PRs created by current user")] bool created_by_me = false,
+        [Description("Filter PRs created by specific user (email or unique name)")] string created_by_user = null,
+        [Description("Filter PRs where current user is reviewer")] bool i_am_reviewer = false,
+        [Description("Filter PRs where specific user is reviewer (email)")] string user_is_reviewer = null,
+        [Description("Filter by status: NotSet, Active, Abandoned, Completed, All")] string status = "Active",
+        [Description("Filter by source branch (e.g., 'refs/heads/feature')")] string sourceRefName = null,
+        [Description("Filter by target branch (e.g., 'refs/heads/main')")] string targetRefName = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -341,11 +341,11 @@ public static class RepositoryTools
         GitHttpClient gitClient,
         [Description("The ID of the repository")] string repositoryId,
         [Description("The ID of the pull request")] int pullRequestId,
-        [Description("Project ID or name (optional)")] string? project = null,
-        [Description("Iteration ID (optional, defaults to latest)")] int? iteration = null,
-        [Description("Base iteration ID (optional)")] int? baseIteration = null,
-        [Description("Maximum number of threads to return")] int? top = 100,
-        [Description("Number of threads to skip")] int? skip = 0,
+        [Description("Project ID or name (optional)")] string project = null,
+        [Description("Iteration ID (optional, defaults to latest)")] int iteration = 0,
+        [Description("Base iteration ID (optional)")] int baseIteration = 0,
+        [Description("Maximum number of threads to return")] int top = 100,
+        [Description("Number of threads to skip")] int skip = 0,
         CancellationToken cancellationToken = default
     )
     {
@@ -353,17 +353,17 @@ public static class RepositoryTools
             project,
             repositoryId,
             pullRequestId,
-            iteration,
-            baseIteration,
+            iteration == 0 ? null : iteration,
+            baseIteration == 0 ? null : baseIteration,
             cancellationToken: cancellationToken);
 
         return threads
-            .Skip(skip ?? 0)
-            .Take(top ?? 100)
+            .Skip(skip)
+            .Take(top)
             .Select(t => new PrThreadDto(
                 t.Id,
                 t.Status.ToString(),
-                t.ThreadContext?.FilePath,
+                t.ThreadContext?.FilePath ?? "",
                 t.Comments?.Count ?? 0,
                 t.LastUpdatedDate
             ))
@@ -376,9 +376,9 @@ public static class RepositoryTools
         [Description("The ID of the repository")] string repositoryId,
         [Description("The ID of the pull request")] int pullRequestId,
         [Description("The ID of the thread")] int threadId,
-        [Description("Project ID or name (optional)")] string? project = null,
-        [Description("Maximum number of comments to return")] int? top = 100,
-        [Description("Number of comments to skip")] int? skip = 0,
+        [Description("Project ID or name (optional)")] string project = null,
+        [Description("Maximum number of comments to return")] int top = 100,
+        [Description("Number of comments to skip")] int skip = 0,
         CancellationToken cancellationToken = default
     )
     {
@@ -390,14 +390,14 @@ public static class RepositoryTools
             cancellationToken: cancellationToken);
 
         return comments
-            .Skip(skip ?? 0)
-            .Take(top ?? 100)
+            .Skip(skip)
+            .Take(top)
             .Select(c => new PrCommentDto(
                 c.Id,
                 c.Content ?? "",
                 c.Author?.DisplayName ?? "",
                 c.PublishedDate,
-                c.ParentCommentId
+                (int)c.ParentCommentId
             ))
             .ToList();
     }
@@ -406,8 +406,8 @@ public static class RepositoryTools
     public static async Task<IReadOnlyList<BranchDto>> RepoListBranches(
         GitHttpClient gitClient,
         [Description("The ID of the repository")] string repositoryId,
-        [Description("Maximum number of branches to return")] int? top = 100,
-        [Description("Filter branches containing this string")] string? filterContains = null,
+        [Description("Maximum number of branches to return")] int top = 100,
+        [Description("Filter branches containing this string")] string filterContains = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -421,11 +421,11 @@ public static class RepositoryTools
             branches = branches.Where(b => b.Name.Contains(filterContains, StringComparison.OrdinalIgnoreCase));
 
         return branches
-            .Take(top ?? 100)
+            .Take(top)
             .Select(b => new BranchDto(
                 b.Name.Replace("refs/heads/", ""),
                 b.ObjectId,
-                b.Creator?.DisplayName,
+                b.Creator?.DisplayName ?? "",
                 b.IsLocked
             ))
             .ToList();
@@ -436,8 +436,8 @@ public static class RepositoryTools
         GitHttpClient gitClient,
         IHttpClientFactory httpClientFactory,
         [Description("The ID of the repository")] string repositoryId,
-        [Description("Maximum number of branches to return")] int? top = 100,
-        [Description("Filter branches containing this string")] string? filterContains = null,
+        [Description("Maximum number of branches to return")] int top = 100,
+        [Description("Filter branches containing this string")] string filterContains = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -460,11 +460,11 @@ public static class RepositoryTools
             branches = branches.Where(b => b.Name.Contains(filterContains, StringComparison.OrdinalIgnoreCase));
 
         return branches
-            .Take(top ?? 100)
+            .Take(top)
             .Select(b => new BranchDto(
                 b.Name.Replace("refs/heads/", ""),
                 b.ObjectId,
-                b.Creator?.DisplayName,
+                b.Creator?.DisplayName ?? "",
                 b.IsLocked
             ))
             .ToList();
@@ -491,7 +491,7 @@ public static class RepositoryTools
     }
 
     [McpServerTool, Description("Get a branch by its name.")]
-    public static async Task<BranchDto?> RepoGetBranchByName(
+    public static async Task<BranchDto> RepoGetBranchByName(
         GitHttpClient gitClient,
         [Description("The ID of the repository")] string repositoryId,
         [Description("The name of the branch (e.g., 'main' or 'feature-branch')")] string branchName,
@@ -511,7 +511,7 @@ public static class RepositoryTools
         return new BranchDto(
             branch.Name.Replace("refs/heads/", ""),
             branch.ObjectId,
-            branch.Creator?.DisplayName,
+            branch.Creator?.DisplayName ?? "",
             branch.IsLocked
         );
     }
@@ -521,7 +521,7 @@ public static class RepositoryTools
         GitHttpClient gitClient,
         [Description("The ID of the repository")] string repositoryId,
         [Description("The ID of the pull request")] int pullRequestId,
-        [Description("Whether to include work item references")] bool? includeWorkItemRefs = false,
+        [Description("Whether to include work item references")] bool includeWorkItemRefs = false,
         CancellationToken cancellationToken = default
     )
     {
@@ -530,8 +530,8 @@ public static class RepositoryTools
             pullRequestId,
             cancellationToken: cancellationToken);
 
-        List<string>? workItemIds = null;
-        if (includeWorkItemRefs == true)
+        List<string> workItemIds = null;
+        if (includeWorkItemRefs)
         {
             var workItems = await gitClient.GetPullRequestWorkItemRefsAsync(
                 repositoryId,
@@ -553,8 +553,8 @@ public static class RepositoryTools
             pr.CreationDate,
             pr.Url,
             pr.IsDraft ?? false,
-            workItemIds,
-            reviewerNames
+            workItemIds ?? new List<string>(),
+            reviewerNames ?? new List<string>()
         );
     }
 
@@ -565,7 +565,7 @@ public static class RepositoryTools
         [Description("The ID of the pull request")] int pullRequestId,
         [Description("The ID of the thread to reply to")] int threadId,
         [Description("The content of the reply")] string content,
-        [Description("Project ID or name (optional)")] string? project = null,
+        [Description("Project ID or name (optional)")] string project = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -594,13 +594,13 @@ public static class RepositoryTools
         [Description("The ID of the repository where the pull request is located")] string repositoryId,
         [Description("The ID of the pull request where the comment thread will be created")] int pullRequestId,
         [Description("The content of the comment to be added")] string content,
-        [Description("Project ID or project name (optional)")] string? project = null,
-        [Description("The path of the file where the comment thread will be created (optional)")] string? filePath = null,
-        [Description("The status of the comment thread: Unknown, Active, Fixed, WontFix, Closed, ByDesign, Pending. Defaults to Active")] string? status = "Active",
-        [Description("Position of first character - line number (1-based, optional)")] int? rightFileStartLine = null,
-        [Description("Position of first character - character offset (1-based, optional)")] int? rightFileStartOffset = null,
-        [Description("Position of last character - line number (1-based, optional)")] int? rightFileEndLine = null,
-        [Description("Position of last character - character offset (optional)")] int? rightFileEndOffset = null,
+        [Description("Project ID or project name (optional)")] string project = null,
+        [Description("The path of the file where the comment thread will be created (optional)")] string filePath = null,
+        [Description("The status of the comment thread: Unknown, Active, Fixed, WontFix, Closed, ByDesign, Pending. Defaults to Active")] string status = "Active",
+        [Description("Position of first character - line number (1-based, optional)")] int rightFileStartLine = 0,
+        [Description("Position of first character - character offset (1-based, optional)")] int rightFileStartOffset = 0,
+        [Description("Position of last character - line number (1-based, optional)")] int rightFileEndLine = 0,
+        [Description("Position of last character - character offset (optional)")] int rightFileEndOffset = 0,
         CancellationToken cancellationToken = default
     )
     {
@@ -633,20 +633,20 @@ public static class RepositoryTools
                 FilePath = filePath
             };
 
-            if (rightFileStartLine.HasValue)
+            if (rightFileStartLine > 0)
             {
                 thread.ThreadContext.RightFileStart = new CommentPosition
                 {
-                    Line = rightFileStartLine.Value,
-                    Offset = rightFileStartOffset ?? 1
+                    Line = rightFileStartLine,
+                    Offset = rightFileStartOffset > 0 ? rightFileStartOffset : 1
                 };
 
-                if (rightFileEndLine.HasValue)
+                if (rightFileEndLine > 0)
                 {
                     thread.ThreadContext.RightFileEnd = new CommentPosition
                     {
-                        Line = rightFileEndLine.Value,
-                        Offset = rightFileEndOffset ?? 1
+                        Line = rightFileEndLine,
+                        Offset = rightFileEndOffset > 0 ? rightFileEndOffset : 1
                     };
                 }
             }
@@ -663,7 +663,7 @@ public static class RepositoryTools
             created.Id,
             created.Status.ToString(),
             content,
-            filePath,
+            filePath ?? "",
             created.PublishedDate
         );
     }
@@ -674,7 +674,7 @@ public static class RepositoryTools
         [Description("The ID of the repository where the pull request is located")] string repositoryId,
         [Description("The ID of the pull request where the comment thread exists")] int pullRequestId,
         [Description("The ID of the thread to be resolved")] int threadId,
-        [Description("Project ID or project name (optional)")] string? project = null,
+        [Description("Project ID or project name (optional)")] string project = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -703,19 +703,19 @@ public static class RepositoryTools
         GitHttpClient gitClient,
         [Description("Project name or ID")] string project,
         [Description("Repository name or ID")] string repository,
-        [Description("Starting commit ID (optional)")] string? fromCommit = null,
-        [Description("Ending commit ID (optional)")] string? toCommit = null,
-        [Description("The name of the branch, tag or commit to filter commits by (optional)")] string? version = null,
-        [Description("The meaning of the version parameter: Branch, Tag, or Commit. Defaults to Branch")] string? versionType = "Branch",
-        [Description("Number of commits to skip")] int? skip = 0,
-        [Description("Maximum number of commits to return")] int? top = 10,
-        [Description("Include commit links")] bool? includeLinks = false,
-        [Description("Include associated work items")] bool? includeWorkItems = false,
-        [Description("Search text to filter commits by description/comment (optional)")] string? searchText = null,
-        [Description("Filter commits by author email or display name (optional)")] string? author = null,
-        [Description("Filter commits from this date (ISO 8601 format, optional)")] string? fromDate = null,
-        [Description("Filter commits to this date (ISO 8601 format, optional)")] string? toDate = null,
-        [Description("Array of specific commit IDs to retrieve (optional)")] string[]? commitIds = null,
+        [Description("Starting commit ID (optional)")] string fromCommit = null,
+        [Description("Ending commit ID (optional)")] string toCommit = null,
+        [Description("The name of the branch, tag or commit to filter commits by (optional)")] string version = null,
+        [Description("The meaning of the version parameter: Branch, Tag, or Commit. Defaults to Branch")] string versionType = "Branch",
+        [Description("Number of commits to skip")] int skip = 0,
+        [Description("Maximum number of commits to return")] int top = 10,
+        [Description("Include commit links")] bool includeLinks = false,
+        [Description("Include associated work items")] bool includeWorkItems = false,
+        [Description("Search text to filter commits by description/comment (optional)")] string searchText = null,
+        [Description("Filter commits by author email or display name (optional)")] string author = null,
+        [Description("Filter commits from this date (ISO 8601 format, optional)")] string fromDate = null,
+        [Description("Filter commits to this date (ISO 8601 format, optional)")] string toDate = null,
+        [Description("Array of specific commit IDs to retrieve (optional)")] string[] commitIds = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -724,10 +724,10 @@ public static class RepositoryTools
             FromCommitId = fromCommit,
             ToCommitId = toCommit,
             Author = author,
-            IncludeLinks = includeLinks ?? false,
-            IncludeWorkItems = includeWorkItems ?? false,
-            Skip = skip ?? 0,
-            Top = top ?? 10
+            IncludeLinks = includeLinks,
+            IncludeWorkItems = includeWorkItems,
+            Skip = skip,
+            Top = top
         };
 
         // Handle version/branch filtering
@@ -776,7 +776,7 @@ public static class RepositoryTools
             c.Author?.Date ?? DateTime.MinValue,
             c.Committer?.Date ?? DateTime.MinValue,
             c.RemoteUrl,
-            c.WorkItems?.Select(w => w.Id).ToList()
+            c.WorkItems?.Select(w => w.Id).ToList() ?? new List<string>()
         )).ToList();
 
         return new CommitSearchResult(commitDtos, commitDtos.Count);
@@ -788,7 +788,7 @@ public static class RepositoryTools
         [Description("Project name or ID")] string project,
         [Description("Repository name or ID")] string repository,
         [Description("Array of commit IDs to query for")] string[] commits,
-        [Description("Type of query: NotSet, LastMergeCommit, or Commit. Defaults to LastMergeCommit")] string? queryType = "LastMergeCommit",
+        [Description("Type of query: NotSet, LastMergeCommit, or Commit. Defaults to LastMergeCommit")] string queryType = "LastMergeCommit",
         CancellationToken cancellationToken = default
     )
     {

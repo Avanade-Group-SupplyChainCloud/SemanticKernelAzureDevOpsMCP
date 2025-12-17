@@ -6,10 +6,10 @@ using ModelContextProtocol.Server;
 namespace AdoMcpRestServer.Tools;
 
 // Pipeline DTOs
-public record BuildChangeDto(string Id, string Message, string Author, string Timestamp, string? Location);
-public record BuildChangesResult(List<BuildChangeDto> Changes, string? ContinuationToken);
-public record PipelineRunDto(int Id, string Name, string State, string Result, DateTime? CreatedDate, DateTime? FinishedDate, string? Url);
-public record BuildStatusDto(int Id, string BuildNumber, string Status, string? Result, string? SourceBranch, string? SourceVersion, DateTime? StartTime, DateTime? FinishTime, string? Url);
+public record BuildChangeDto(string Id, string Message, string Author, string Timestamp, string Location);
+public record BuildChangesResult(List<BuildChangeDto> Changes, string ContinuationToken);
+public record PipelineRunDto(int Id, string Name, string State, string Result, DateTime CreatedDate, DateTime FinishedDate, string Url);
+public record BuildStatusDto(int Id, string BuildNumber, string Status, string Result, string SourceBranch, string SourceVersion, DateTime StartTime, DateTime FinishTime, string Url);
 public record UpdateBuildStageResult(int BuildId, string StageName, string Status);
 
 [McpServerToolType]
@@ -20,9 +20,9 @@ public static class PipelineTools
         BuildHttpClient buildClient,
         [Description("Project ID or name to get the build changes for")] string project,
         [Description("ID of the build to get changes for")] int buildId,
-        [Description("Continuation token for pagination (optional)")] string? continuationToken = null,
-        [Description("Number of changes to retrieve, defaults to 100")] int? top = 100,
-        [Description("Whether to include source changes in the results")] bool? includeSourceChange = false,
+        [Description("Continuation token for pagination (optional)")] string continuationToken = null,
+        [Description("Number of changes to retrieve, defaults to 100")] int top = 100,
+        [Description("Whether to include source changes in the results")] bool includeSourceChange = false,
         CancellationToken cancellationToken = default
     )
     {
@@ -30,8 +30,8 @@ public static class PipelineTools
             project,
             buildId,
             continuationToken,
-            top ?? 100,
-            includeSourceChange ?? false,
+            top,
+            includeSourceChange,
             cancellationToken: cancellationToken);
 
         var changeDtos = changes.Select(c => new BuildChangeDto(
@@ -39,7 +39,7 @@ public static class PipelineTools
             c.Message ?? "",
             c.Author?.DisplayName ?? "",
             c.Timestamp?.ToString("o") ?? "",
-            c.Location?.ToString()
+            c.Location?.ToString() ?? ""
         )).ToList();
 
         return new BuildChangesResult(changeDtos, null);
@@ -62,8 +62,8 @@ public static class PipelineTools
             run.State.ToString(),
             run.Result?.ToString() ?? "",
             run.CreatedDate,
-            run.FinishedDate,
-            run.Url
+            run.FinishedDate ?? DateTime.MinValue,
+            run.Url ?? ""
         );
     }
 
@@ -83,8 +83,8 @@ public static class PipelineTools
             r.State.ToString(),
             r.Result?.ToString() ?? "",
             r.CreatedDate,
-            r.FinishedDate,
-            r.Url
+            r.FinishedDate ?? DateTime.MinValue,
+            r.Url ?? ""
         )).ToList();
     }
 
@@ -93,16 +93,16 @@ public static class PipelineTools
         PipelinesHttpClient pipelinesClient,
         [Description("Project ID or name to run the build in")] string project,
         [Description("ID of the pipeline to run")] int pipelineId,
-        [Description("Version of the pipeline to run (optional)")] int? pipelineVersion = null,
-        [Description("If true, returns the final YAML without creating a run (optional)")] bool? previewRun = null,
-        [Description("Stages to skip (optional)")] string[]? stagesToSkip = null,
-        [Description("Template parameters as JSON key-value pairs (optional)")] Dictionary<string, string>? templateParameters = null,
+        [Description("Version of the pipeline to run (optional)")] int pipelineVersion = 0,
+        [Description("If true, returns the final YAML without creating a run (optional)")] bool previewRun = false,
+        [Description("Stages to skip (optional)")] string[] stagesToSkip = null,
+        [Description("Template parameters as JSON key-value pairs (optional)")] Dictionary<string, string> templateParameters = null,
         CancellationToken cancellationToken = default
     )
     {
         var runParams = new RunPipelineParameters();
 
-        if (previewRun == true)
+        if (previewRun)
         {
             runParams.PreviewRun = true;
         }
@@ -120,7 +120,7 @@ public static class PipelineTools
             runParams.TemplateParameters = templateParameters;
         }
 
-        var run = await pipelinesClient.RunPipelineAsync(runParams, project, pipelineId, pipelineVersion, cancellationToken: cancellationToken);
+        var run = await pipelinesClient.RunPipelineAsync(runParams, project, pipelineId, pipelineVersion == 0 ? null : pipelineVersion, cancellationToken: cancellationToken);
 
         return new PipelineRunDto(
             run.Id,
@@ -128,8 +128,8 @@ public static class PipelineTools
             run.State.ToString(),
             run.Result?.ToString() ?? "",
             run.CreatedDate,
-            run.FinishedDate,
-            run.Url
+            run.FinishedDate ?? DateTime.MinValue,
+            run.Url ?? ""
         );
     }
 
@@ -147,12 +147,12 @@ public static class PipelineTools
             build.Id,
             build.BuildNumber ?? "",
             build.Status?.ToString() ?? "",
-            build.Result?.ToString(),
-            build.SourceBranch,
-            build.SourceVersion,
-            build.StartTime,
-            build.FinishTime,
-            build.Url
+            build.Result?.ToString() ?? "",
+            build.SourceBranch ?? "",
+            build.SourceVersion ?? "",
+            build.StartTime ?? DateTime.MinValue,
+            build.FinishTime ?? DateTime.MinValue,
+            build.Url ?? ""
         );
     }
 
@@ -163,7 +163,7 @@ public static class PipelineTools
         [Description("ID of the build to update")] int buildId,
         [Description("Name of the stage to update")] string stageName,
         [Description("New status for the stage: Cancel, Retry, or Run")] string status,
-        [Description("Whether to force retry all jobs in the stage")] bool? forceRetryAllJobs = false,
+        [Description("Whether to force retry all jobs in the stage")] bool forceRetryAllJobs = false,
         CancellationToken cancellationToken = default
     )
     {
@@ -178,7 +178,7 @@ public static class PipelineTools
         var updateParams = new UpdateStageParameters
         {
             State = stageState,
-            ForceRetryAllJobs = forceRetryAllJobs ?? false
+            ForceRetryAllJobs = forceRetryAllJobs
         };
 
         await buildClient.UpdateStageAsync(updateParams, project, buildId, stageName, cancellationToken: cancellationToken);

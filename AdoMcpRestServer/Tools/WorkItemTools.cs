@@ -9,14 +9,14 @@ using ModelContextProtocol.Server;
 
 namespace AdoMcpRestServer.Tools;
 
-public record IterationSummary(string Id, string Name, string Path, DateTime? StartDate, DateTime? FinishDate);
-public record NewIteration(string IterationName, string? StartDate, string? FinishDate);
+public record IterationSummary(string Id, string Name, string Path, DateTime StartDate, DateTime FinishDate);
+public record NewIteration(string IterationName, string StartDate, string FinishDate);
 public record CreatedIterations(IReadOnlyList<IterationSummary> Created);
 
 // Iteration/Capacity DTOs
-public record IterationNode(string Id, string Name, string Path, DateTime? StartDate, DateTime? FinishDate, List<IterationNode>? Children);
+public record IterationNode(string Id, string Name, string Path, DateTime StartDate, DateTime FinishDate, List<IterationNode> Children);
 public record IterationToAssign(string Identifier, string Path);
-public record AssignedIterationResult(string Id, string Path, bool Success, string? Error);
+public record AssignedIterationResult(string Id, string Path, bool Success, string Error);
 public record ActivityCapacity(string Name, double CapacityPerDay);
 public record DayOff(string Start, string End);
 public record CapacityMemberDto(string TeamMemberId, string DisplayName, List<ActivityCapacity> Activities, List<DayOff> DaysOff);
@@ -24,14 +24,14 @@ public record TeamCapacityResult(string TeamName, string IterationId, List<Capac
 public record IterationCapacityResult(string IterationId, string Project, List<TeamCapacityResult> Teams);
 
 // Backlog DTOs
-public record BacklogDto(string Id, string Name, string Type, int? Rank, List<string>? WorkItemTypes);
+public record BacklogDto(string Id, string Name, string Type, int Rank, List<string> WorkItemTypes);
 
 // Work Item DTOs
 public record WorkItemDto(int Id, string Title, string Type, string State, string Url);
 public record WorkItemCommentDto(int Id, string Text, string CreatedBy, DateTime CreatedDate);
-public record ChildWorkItemInput(string Title, string Description, string? Format, string? AreaPath, string? IterationPath);
+public record ChildWorkItemInput(string Title, string Description, string Format, string AreaPath, string IterationPath);
 public record WorkItemUpdate(string Op, string Path, object Value);
-public record WorkItemLinkResult(int WorkItemId, string TargetId, string RelationType, bool Success, string? Error);
+public record WorkItemLinkResult(int WorkItemId, string TargetId, string RelationType, bool Success, string Error);
 public record WorkItemTypeDto(string Name, string Description, List<string> Fields);
 public record FieldInput(string Name, string Value, string Format = "Html");
 public record QueryHierarchyItemDto(string Id, string Name, string Path, bool IsFolder, bool HasChildren);
@@ -47,7 +47,7 @@ public static class WorkItemTools
         WorkHttpClient workClient,
         [Description("Project name or id")] string project,
         [Description("Team name or id")] string team,
-        [Description("Timeframe filter (e.g., current). Optional.")] string? timeframe = null,
+        [Description("Timeframe filter (e.g., current). Optional.")] string timeframe = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -58,8 +58,8 @@ public static class WorkItemTools
                 it.Id.ToString(),
                 it.Name,
                 it.Path,
-                it.Attributes?.StartDate,
-                it.Attributes?.FinishDate))
+                it.Attributes?.StartDate ?? DateTime.MinValue,
+                it.Attributes?.FinishDate ?? DateTime.MinValue))
             .ToList();
     }
 
@@ -78,7 +78,7 @@ public static class WorkItemTools
             var node = new WorkItemClassificationNode
             {
                 Name = it.IterationName,
-                Attributes = new Dictionary<string, object?>()
+                Attributes = new Dictionary<string, object>()
             };
 
             if (!string.IsNullOrWhiteSpace(it.StartDate) && DateTime.TryParse(it.StartDate, out var start))
@@ -101,8 +101,8 @@ public static class WorkItemTools
                 createdNode.Identifier.ToString(),
                 createdNode.Name,
                 createdNode.Path,
-                createdNode.Attributes?.ContainsKey("startDate") == true ? createdNode.Attributes["startDate"] as DateTime? : null,
-                createdNode.Attributes?.ContainsKey("finishDate") == true ? createdNode.Attributes["finishDate"] as DateTime? : null));
+                createdNode.Attributes?.ContainsKey("startDate") == true ? (DateTime)createdNode.Attributes["startDate"] : DateTime.MinValue,
+                createdNode.Attributes?.ContainsKey("finishDate") == true ? (DateTime)createdNode.Attributes["finishDate"] : DateTime.MinValue));
         }
 
         return new CreatedIterations(created);
@@ -112,14 +112,14 @@ public static class WorkItemTools
     public static async Task<IterationNode> WorkListIterations(
         WorkItemTrackingHttpClient witClient,
         [Description("The name or ID of the Azure DevOps project.")] string project,
-        [Description("Depth of children to fetch (default: 2).")] int? depth = 2,
+        [Description("Depth of children to fetch (default: 2).")] int depth = 2,
         CancellationToken cancellationToken = default
     )
     {
         var node = await witClient.GetClassificationNodeAsync(
             project,
             TreeStructureGroup.Iterations,
-            depth: depth ?? 2,
+            depth: depth,
             cancellationToken: cancellationToken);
 
         return MapIterationNode(node);
@@ -127,10 +127,10 @@ public static class WorkItemTools
 
     private static IterationNode MapIterationNode(WorkItemClassificationNode node)
     {
-        DateTime? start = node.Attributes?.TryGetValue("startDate", out var s) == true ? s as DateTime? : null;
-        DateTime? finish = node.Attributes?.TryGetValue("finishDate", out var f) == true ? f as DateTime? : null;
+        DateTime start = node.Attributes?.TryGetValue("startDate", out var s) == true ? (DateTime)s : DateTime.MinValue;
+        DateTime finish = node.Attributes?.TryGetValue("finishDate", out var f) == true ? (DateTime)f : DateTime.MinValue;
 
-        var children = node.Children?.Select(MapIterationNode).ToList();
+        var children = node.Children?.Select(MapIterationNode).ToList() ?? new List<IterationNode>();
 
         return new IterationNode(
             node.Identifier.ToString(),
@@ -200,7 +200,7 @@ public static class WorkItemTools
         [Description("The team member Id for the specific team member.")] string teamMemberId,
         [Description("The Iteration Id to update the capacity for.")] string iterationId,
         [Description("Array of activities and their daily capacities for the team member.")] ActivityCapacity[] activities,
-        [Description("Array of days off for the team member (optional).")] DayOff[]? daysOff = null,
+        [Description("Array of days off for the team member (optional).")] DayOff[] daysOff = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -275,7 +275,7 @@ public static class WorkItemTools
             b.Name ?? "",
             b.Type.ToString(),
             b.Rank,
-            b.WorkItemTypes?.Select(wit => wit.Name).ToList()
+            b.WorkItemTypes?.Select(wit => wit.Name).ToList() ?? new List<string>()
         )).ToList();
     }
 
@@ -285,7 +285,7 @@ public static class WorkItemTools
         [Description("The name or ID of the Azure DevOps project.")] string project,
         [Description("The ID of the work item to add a comment to.")] int workItemId,
         [Description("The text of the comment to add to the work item.")] string comment,
-        [Description("Format: markdown or html (default html)")] string? format = "html",
+        [Description("Format: markdown or html (default html)")] string format = "html",
         CancellationToken cancellationToken = default
     )
     {
@@ -388,7 +388,7 @@ public static class WorkItemTools
         [Description("The ID of the repository containing the pull request.")] string repositoryId,
         [Description("The ID of the pull request to link to.")] int pullRequestId,
         [Description("The ID of the work item to link to the pull request.")] int workItemId,
-        [Description("The project ID containing the pull request (optional).")] string? pullRequestProjectId = null,
+        [Description("The project ID containing the pull request (optional).")] string pullRequestProjectId = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -428,7 +428,7 @@ public static class WorkItemTools
         WorkItemTrackingHttpClient witClient,
         [Description("The name or ID of the Azure DevOps project.")] string project,
         [Description("The ID of the iteration to retrieve work items for.")] string iterationId,
-        [Description("The name or ID of the Azure DevOps team (optional).")] string? team = null,
+        [Description("The name or ID of the Azure DevOps team (optional).")] string team = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -543,9 +543,9 @@ public static class WorkItemTools
         WorkItemTrackingHttpClient witClient,
         [Description("The name or ID of the Azure DevOps project.")] string project,
         [Description("The ID or path of the query to retrieve.")] string query,
-        [Description("Expand options: None, Wiql, Clauses, All, Minimal")] string? expand = "None",
-        [Description("Depth to expand")] int? depth = 0,
-        [Description("Include deleted items")] bool? includeDeleted = false,
+        [Description("Expand options: None, Wiql, Clauses, All, Minimal")] string expand = "None",
+        [Description("Depth to expand")] int depth = 0,
+        [Description("Include deleted items")] bool includeDeleted = false,
         CancellationToken cancellationToken = default
     )
     {
@@ -565,10 +565,10 @@ public static class WorkItemTools
     public static async Task<WorkItemQueryResultDto> WitGetQueryResultsById(
         WorkItemTrackingHttpClient witClient,
         [Description("The ID of the query.")] string id,
-        [Description("The name or ID of the Azure DevOps project.")] string? project = null,
-        [Description("The name or ID of the Azure DevOps team.")] string? team = null,
-        [Description("Include time precision")] bool? timePrecision = false,
-        [Description("Max results")] int? top = 50,
+        [Description("The name or ID of the Azure DevOps project.")] string project = null,
+        [Description("The name or ID of the Azure DevOps team.")] string team = null,
+        [Description("Include time precision")] bool timePrecision = false,
+        [Description("Max results")] int top = 50,
         CancellationToken cancellationToken = default
     )
     {

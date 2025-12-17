@@ -8,7 +8,7 @@ namespace AdoMcpRestServer.Tools;
 
 public record ProjectSummary(string Id, string Name, string State);
 public record TeamSummary(string Id, string Name, string ProjectId);
-public record IdentitySummary(string Id, string DisplayName, string? MailAddress, string Origin);
+public record IdentitySummary(string Id, string DisplayName, string MailAddress, string Origin);
 
 [McpServerToolType]
 public static class ProjectTools
@@ -16,10 +16,10 @@ public static class ProjectTools
     [McpServerTool, Description("Retrieve a list of projects in your Azure DevOps organization.")]
     public static async Task<IReadOnlyList<ProjectSummary>> ListProjects(
         ProjectHttpClient projectClient,
-        [Description("Project state filter: all, wellFormed, createPending, deleted (optional)")] string? stateFilter = null,
-        [Description("Max number of projects to return (optional)")] int? top = null,
-        [Description("Number of projects to skip (optional)")] int? skip = null,
-        [Description("Filter projects by name (optional)")] string? projectNameFilter = null,
+        [Description("Project state filter: all, wellFormed, createPending, deleted (optional)")] string stateFilter = null,
+        [Description("Max number of projects to return (optional)")] int top = 0,
+        [Description("Number of projects to skip (optional)")] int skip = 0,
+        [Description("Filter projects by name (optional)")] string projectNameFilter = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -33,7 +33,7 @@ public static class ProjectTools
             _ => null,
         };
 
-        var projects = await projectClient.GetProjects(state, top, skip, cancellationToken);
+        var projects = await projectClient.GetProjects(state, top == 0 ? null : top, skip, cancellationToken);
 
         var filtered = string.IsNullOrWhiteSpace(projectNameFilter)
             ? projects
@@ -48,13 +48,13 @@ public static class ProjectTools
     public static async Task<IReadOnlyList<TeamSummary>> ListProjectTeams(
         TeamHttpClient teamClient,
         [Description("Project name or id")] string project,
-        [Description("If true, only return teams that the authenticated user is a member of (optional)")] bool? mine = null,
-        [Description("Max number of teams to return (optional)")] int? top = null,
-        [Description("Number of teams to skip (optional)")] int? skip = null,
+        [Description("If true, only return teams that the authenticated user is a member of (optional)")] bool mine = false,
+        [Description("Max number of teams to return (optional)")] int top = 0,
+        [Description("Number of teams to skip (optional)")] int skip = 0,
         CancellationToken cancellationToken = default
     )
     {
-        var teams = await teamClient.GetTeamsAsync(project, mine, top, skip);
+        var teams = await teamClient.GetTeamsAsync(project, mine, top == 0 ? null : top, skip);
 
         return teams
             .Select(t => new TeamSummary(t.Id.ToString(), t.Name, t.ProjectId.ToString()))
