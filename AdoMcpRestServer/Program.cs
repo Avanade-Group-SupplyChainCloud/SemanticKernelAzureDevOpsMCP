@@ -1,4 +1,5 @@
 using System.Reflection;
+using AdoMcpRestServer.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -7,24 +8,20 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 using ModelContextProtocol.AspNetCore;
-using AdoMcpRestServer.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// API Key authentication
-var apiKey = builder.Configuration["MCP_API_KEY"] 
-    ?? throw new InvalidOperationException("Missing configuration: MCP_API_KEY");
-
-builder.Services
-    .AddMcpServer()
-    .WithHttpTransport()
-    .WithToolsFromAssembly(Assembly.GetExecutingAssembly());
 
 static string GetRequired(IConfiguration config, string key) =>
     config[key] ?? throw new InvalidOperationException($"Missing configuration: {key}");
 
+builder
+    .Services.AddMcpServer()
+    .WithHttpTransport()
+    .WithToolsFromAssembly(Assembly.GetExecutingAssembly());
+
 var org = GetRequired(builder.Configuration, "AZDO_ORG");
 var pat = GetRequired(builder.Configuration, "AZDO_PAT");
+var apiKey = GetRequired(builder.Configuration, "MCP_API_KEY");
 
 builder.Services.AddSingleton(sp =>
 {
@@ -33,37 +30,75 @@ builder.Services.AddSingleton(sp =>
     return new VssConnection(collectionUri, credentials);
 });
 
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.Core.WebApi.ProjectHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.Work.WebApi.WorkHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.WorkItemTracking.WebApi.WorkItemTrackingHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.VisualStudio.Services.Graph.Client.GraphHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.Core.WebApi.TeamHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.VisualStudio.Services.Identity.Client.IdentityHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.Build.WebApi.BuildHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.Azure.Pipelines.WebApi.PipelinesHttpClient>());
-builder.Services.AddSingleton(sp => sp.GetRequiredService<VssConnection>().GetClient<Microsoft.TeamFoundation.SourceControl.WebApi.GitHttpClient>());
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.TeamFoundation.Core.WebApi.ProjectHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.TeamFoundation.Work.WebApi.WorkHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.TeamFoundation.WorkItemTracking.WebApi.WorkItemTrackingHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.VisualStudio.Services.Graph.Client.GraphHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.TeamFoundation.Core.WebApi.TeamHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.VisualStudio.Services.Identity.Client.IdentityHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.TeamFoundation.Build.WebApi.BuildHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.Azure.Pipelines.WebApi.PipelinesHttpClient>()
+);
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<VssConnection>()
+        .GetClient<Microsoft.TeamFoundation.SourceControl.WebApi.GitHttpClient>()
+);
 
-builder.Services.AddHttpClient("ado-pat", client =>
-{
-    client.BaseAddress = new Uri($"https://dev.azure.com/{org}/");
-    var token = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($":{pat}"));
-    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", token);
-    client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-});
+builder.Services.AddHttpClient(
+    "ado-pat",
+    client =>
+    {
+        client.BaseAddress = new Uri($"https://dev.azure.com/{org}/");
+        var token = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($":{pat}"));
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", token);
+        client.DefaultRequestHeaders.Accept.Add(
+            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json")
+        );
+    }
+);
 
 var app = builder.Build();
 
 // Validate API key on all requests
-app.Use(async (context, next) =>
-{
-    if (!context.Request.Headers.TryGetValue("X-API-Key", out var providedKey) || providedKey != apiKey)
+app.Use(
+    async (context, next) =>
     {
-        context.Response.StatusCode = 401;
-        await context.Response.WriteAsync("Unauthorized");
-        return;
+        if (
+            !context.Request.Headers.TryGetValue("X-API-Key", out var providedKey)
+            || providedKey != apiKey
+        )
+        {
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
+        }
+        await next();
     }
-    await next();
-});
+);
 
 app.MapMcp();
 

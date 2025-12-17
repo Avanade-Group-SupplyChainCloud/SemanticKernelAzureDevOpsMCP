@@ -6,13 +6,6 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using ModelContextProtocol.Client;
 
-#pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-var promptExecutionSettings = new PromptExecutionSettings()
-{
-    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
-};
-
 var mcpClient = await McpClient.CreateAsync(
     new StdioClientTransport(
         new StdioClientTransportOptions
@@ -39,48 +32,4 @@ foreach (var tool in tools)
 {
     Console.ForegroundColor = ConsoleColor.Yellow;
     Console.WriteLine($"Discovered tool: {tool.Name} - {tool.Description}");
-}
-
-var kernel = Kernel
-    .CreateBuilder()
-    .AddAzureOpenAIChatCompletion(
-        deploymentName: "gpt-4.1",
-        endpoint: "https://yo.azure.com/",
-        apiKey: ""
-    )
-    .Build();
-
-var chatService = kernel.GetRequiredService<IChatCompletionService>();
-var chatHistory = new ChatHistory(
-    """
-       You are an AI assistant who likes to follow the rules.
-    """
-);
-
-kernel.Plugins.AddFromFunctions("ADO", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
-
-while (true)
-{
-    Console.ForegroundColor = ConsoleColor.White;
-    Console.Write("User > ");
-    chatHistory.AddUserMessage(Console.ReadLine());
-
-    var updates = chatService.GetStreamingChatMessageContentsAsync(
-        chatHistory,
-        promptExecutionSettings,
-        kernel
-    );
-
-    Console.ForegroundColor = ConsoleColor.Green;
-    Console.Write("Assistant > ");
-    var sb = new StringBuilder();
-    await foreach (var update in updates)
-    {
-        sb.Append(update.Content);
-        Console.Write(update.Content);
-    }
-
-    chatHistory.AddAssistantMessage(sb.ToString());
-
-    Console.WriteLine();
 }
